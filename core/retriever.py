@@ -14,7 +14,7 @@ except ImportError:
 DATA_DIR = Path(__file__).parent.parent / "data"
 CHROMA_PATH = DATA_DIR / "chroma_db"
 
-_client: Optional[chromadb.PersistentClient] = None
+_client = None
 _collection = None
 
 
