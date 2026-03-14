@@ -1,0 +1,10 @@
+.env
+.env.local
+__pycache__/
+*.pyc
+data/chroma_db/
+data/tutor.db
+data/*.pdf
+web/node_modules/
+web/.next/
+web/.env.local
