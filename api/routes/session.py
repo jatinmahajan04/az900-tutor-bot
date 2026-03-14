@@ -79,6 +79,7 @@ def _make_session(domain: str, user_id: Optional[str]) -> dict:
         "pending_answer": None,   # holds answer until explanation is submitted
         "conversation_history": [],
         "recent_topics": [],
+        "chat_count": 0,
     }
 
 
@@ -179,6 +180,7 @@ async def submit_explanation(req: ExplainRequest):
 
     next_q = generate_question(session["domain"], session["recent_topics"])
     session["current_question"] = next_q
+    session["chat_count"] = 0
 
     return ExplainResponse(
         feedback=feedback,
@@ -186,15 +188,20 @@ async def submit_explanation(req: ExplainRequest):
     )
 
 
+CHAT_LIMIT = 2
+
 @router.post("/chat")
 async def chat(req: AnswerRequest):
     """Free-form follow-up chat within the current session."""
     session = _get_session(req.session_id)
+    if session["chat_count"] >= CHAT_LIMIT:
+        raise HTTPException(status_code=429, detail="Chat limit reached for this question")
     response = chat_followup(req.answer, session["conversation_history"], session["domain"])
     session["conversation_history"].append({"role": "user", "content": req.answer})
     session["conversation_history"].append({"role": "assistant", "content": response})
     if len(session["conversation_history"]) > 12:
         session["conversation_history"] = session["conversation_history"][-12:]
+    session["chat_count"] += 1
     return {"response": response}
 
 
@@ -222,5 +229,6 @@ async def skip_explanation(session_id: str):
 
     next_q = generate_question(session["domain"], session["recent_topics"])
     session["current_question"] = next_q
+    session["chat_count"] = 0
 
     return {"next_question_text": format_question_message(next_q)}

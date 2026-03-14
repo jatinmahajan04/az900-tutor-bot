@@ -132,7 +132,11 @@ export default function SessionPage() {
     addMessage("user", message);
     setLoading(true);
     const data = await sendChat(sessionId, message);
-    addMessage("tutor", data.response);
+    if (data?.detail === "Chat limit reached for this question") {
+      addMessage("tutor", "You've used your 2 follow-ups for this question. Answer the next one to continue.");
+    } else {
+      addMessage("tutor", data.response);
+    }
     setLoading(false);
   }
 
