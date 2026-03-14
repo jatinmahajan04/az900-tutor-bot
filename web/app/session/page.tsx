@@ -94,6 +94,10 @@ export default function SessionPage() {
 
     const data = await submitExplanation(sessionId, explanation);
     if (isSessionError(data)) { handleSessionExpired(); setLoading(false); return; }
+    if (data?.detail === "Interaction limit reached for this question") {
+      addMessage("tutor", "You've reached the limit for this question. Click 'Next question' to continue.");
+      setLoading(false); return;
+    }
     addMessage("tutor", data.feedback);
     addMessage("tutor", "When you're ready, pick your next move below.");
     setPendingQuestion(data.next_question_text);
@@ -132,8 +136,8 @@ export default function SessionPage() {
     addMessage("user", message);
     setLoading(true);
     const data = await sendChat(sessionId, message);
-    if (data?.detail === "Chat limit reached for this question") {
-      addMessage("tutor", "You've used your 2 follow-ups for this question. Answer the next one to continue.");
+    if (data?.detail === "Interaction limit reached for this question") {
+      addMessage("tutor", "You've reached the limit for this question. Click 'Next question' to continue.");
     } else {
       addMessage("tutor", data.response);
     }

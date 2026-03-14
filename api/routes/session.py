@@ -79,7 +79,7 @@ def _make_session(domain: str, user_id: Optional[str]) -> dict:
         "pending_answer": None,   # holds answer until explanation is submitted
         "conversation_history": [],
         "recent_topics": [],
-        "chat_count": 0,
+        "interaction_count": 0,  # LLM calls after answering (explain + chat combined)
     }
 
 
@@ -126,6 +126,9 @@ def submit_answer(req: AnswerRequest):
     if len(session["conversation_history"]) > 12:
         session["conversation_history"] = session["conversation_history"][-12:]
 
+    # Reset interaction count for this new question
+    session["interaction_count"] = 0
+
     # Store answer for later — we save to Supabase after explanation (or skip)
     session["pending_answer"] = {
         "answer": req.answer,
@@ -156,6 +159,10 @@ async def submit_explanation(req: ExplainRequest):
     if not question:
         raise HTTPException(status_code=400, detail="No active question")
 
+    if session["interaction_count"] >= INTERACTION_LIMIT:
+        raise HTTPException(status_code=429, detail="Interaction limit reached for this question")
+    session["interaction_count"] += 1
+
     feedback = evaluate_explanation(question, req.explanation)
 
     session["conversation_history"].append({"role": "user", "content": req.explanation})
@@ -180,7 +187,7 @@ async def submit_explanation(req: ExplainRequest):
 
     next_q = generate_question(session["domain"], session["recent_topics"])
     session["current_question"] = next_q
-    session["chat_count"] = 0
+    session["interaction_count"] = 0
 
     return ExplainResponse(
         feedback=feedback,
@@ -188,20 +195,20 @@ async def submit_explanation(req: ExplainRequest):
     )
 
 
-CHAT_LIMIT = 2
+INTERACTION_LIMIT = 3  # max explain + chat calls per question
 
 @router.post("/chat")
 async def chat(req: AnswerRequest):
     """Free-form follow-up chat within the current session."""
     session = _get_session(req.session_id)
-    if session["chat_count"] >= CHAT_LIMIT:
-        raise HTTPException(status_code=429, detail="Chat limit reached for this question")
+    if session["interaction_count"] >= INTERACTION_LIMIT:
+        raise HTTPException(status_code=429, detail="Interaction limit reached for this question")
+    session["interaction_count"] += 1
     response = chat_followup(req.answer, session["conversation_history"], session["domain"])
     session["conversation_history"].append({"role": "user", "content": req.answer})
     session["conversation_history"].append({"role": "assistant", "content": response})
     if len(session["conversation_history"]) > 12:
         session["conversation_history"] = session["conversation_history"][-12:]
-    session["chat_count"] += 1
     return {"response": response}
 
 
@@ -229,6 +236,6 @@ async def skip_explanation(session_id: str):
 
     next_q = generate_question(session["domain"], session["recent_topics"])
     session["current_question"] = next_q
-    session["chat_count"] = 0
+    session["interaction_count"] = 0
 
     return {"next_question_text": format_question_message(next_q)}
