@@ -4,8 +4,12 @@ import random
 from pathlib import Path
 from typing import Optional
 
-import chromadb
-from chromadb.utils import embedding_functions
+try:
+    import chromadb
+    from chromadb.utils import embedding_functions
+    _CHROMADB_AVAILABLE = True
+except ImportError:
+    _CHROMADB_AVAILABLE = False
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 CHROMA_PATH = DATA_DIR / "chroma_db"
@@ -30,6 +34,8 @@ def _get_collection():
 
 def _get_collection_safe():
     """Return collection or None if not available (e.g. on Railway without chroma_db)."""
+    if not _CHROMADB_AVAILABLE:
+        return None
     try:
         return _get_collection()
     except Exception:
