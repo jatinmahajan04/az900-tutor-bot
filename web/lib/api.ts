@@ -1,5 +1,11 @@
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
+export interface QuestionData {
+  topic: string;
+  question: string;
+  options: Record<string, string>;
+}
+
 export async function fetchDomains(): Promise<string[]> {
   const res = await fetch(`${API}/session/domains`);
   const data = await res.json();
@@ -12,7 +18,7 @@ export async function startSession(domain: string, userId: string) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ domain, user_id: userId }),
   });
-  return res.json(); // { session_id, question_text, domain }
+  return res.json(); // { session_id, question: QuestionData, domain }
 }
 
 export async function submitAnswer(sessionId: string, answer: string) {

@@ -35,9 +35,15 @@ class StartRequest(BaseModel):
     user_id: Optional[str] = None
 
 
+class QuestionOut(BaseModel):
+    topic: str
+    question: str
+    options: dict[str, str]
+
+
 class StartResponse(BaseModel):
     session_id: str
-    question_text: str
+    question: QuestionOut
     domain: str
 
 
@@ -59,7 +65,7 @@ class ExplainRequest(BaseModel):
 
 class ExplainResponse(BaseModel):
     feedback: str
-    next_question_text: str
+    next_question: QuestionOut
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -103,7 +109,11 @@ def start_session(req: StartRequest):
 
     return StartResponse(
         session_id=session_id,
-        question_text=format_question_message(question),
+        question=QuestionOut(
+            topic=question["topic"],
+            question=question["question"],
+            options=question["options"],
+        ),
         domain=req.domain,
     )
 
@@ -191,7 +201,11 @@ async def submit_explanation(req: ExplainRequest):
 
     return ExplainResponse(
         feedback=feedback,
-        next_question_text=format_question_message(next_q),
+        next_question=QuestionOut(
+            topic=next_q["topic"],
+            question=next_q["question"],
+            options=next_q["options"],
+        ),
     )
 
 
@@ -238,4 +252,10 @@ async def skip_explanation(session_id: str):
     session["current_question"] = next_q
     session["interaction_count"] = 0
 
-    return {"next_question_text": format_question_message(next_q)}
+    return {
+        "next_question": {
+            "topic": next_q["topic"],
+            "question": next_q["question"],
+            "options": next_q["options"],
+        }
+    }

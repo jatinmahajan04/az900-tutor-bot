@@ -33,7 +33,7 @@ export default function LandingPage() {
         </ul>
 
         <button
-          onClick={() => router.push("/session")}
+          onClick={() => router.push("/auth")}
           className="bg-azure-500 hover:bg-azure-600 text-white font-semibold px-8 py-4 rounded-lg text-lg transition-colors"
         >
           Start Studying Free →
